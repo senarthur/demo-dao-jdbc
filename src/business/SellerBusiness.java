@@ -1,44 +1,30 @@
-package model.dao;
+package business;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import db.DB;
 import db.DbException;
+import model.dao.ModelDao;
 import model.entities.Department;
 import model.entities.Seller;
 
-public class SellerDaoJDBC implements ModelDao<Seller> {
+public class SellerBusiness extends BaseBusiness<Seller> {
 	
 	private Connection conn;
 	
-	public SellerDaoJDBC(Connection conn) {
+	public SellerBusiness(ModelDao<Seller> sellerDao, Connection conn) {
+		super(sellerDao);
 		this.conn = conn;
 	}
-
-	@Override
-	public void insert(Seller obj) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void update(Seller obj) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void deleteById(Integer id) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public Seller findById(Integer id) {
+	
+	public List<Seller> findByDepartment(Department department) {
 		PreparedStatement st = null;
 		ResultSet rs = null;
 		try {
@@ -46,16 +32,26 @@ public class SellerDaoJDBC implements ModelDao<Seller> {
 					"SELECT seller.*, department.Name as DepName "
 					+ "FROM seller INNER JOIN department "
 					+ "ON seller.DepartmentId = department.Id "
-					+ "WHERE seller.Id = ?");
+					+ "WHERE department.Id = ? "
+					+ "ORDER BY Name");
 			
-			st.setInt(1, id);
+			st.setInt(1, department.getId());
 			rs = st.executeQuery();
-			if(rs.next()) { // Se retornar false, significa que não retornou nenhum dado 
-				Department dep = instantiateDepartment(rs);
+			
+			List<Seller> list = new ArrayList<>();
+			Map<Integer, Department> map = new HashMap<>();
+			
+			while (rs.next()) { 
+				Department dep = map.get(rs.getInt("DepartmentId"));
+				if(dep == null) {
+					dep = instantiateDepartment(rs);					
+					map.put(rs.getInt("DepartmentId"), dep);
+				}
+				
 				Seller seller = instantiateSeller(rs, dep);
-				return seller;
+				list.add(seller);
 			}
-			return null;
+			return list;
 		} catch (SQLException e) {
 			throw new DbException(e.getMessage());
 		} finally {
@@ -81,11 +77,4 @@ public class SellerDaoJDBC implements ModelDao<Seller> {
 		dep.setName(rs.getString("DepName"));
 		return dep;
 	}
-
-	@Override
-	public List<Seller> findAll() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 }
